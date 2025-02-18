@@ -1,0 +1,11 @@
+{"msgid":1,"id":1, "name":"zhangsan","password":"123456"} 
+{"msgid":1,"id":2, "name":"lisi","password":"123456"}// 登录
+{"msgid":2} // 登录回应
+
+{"msgid":3,"name":"zhangsan","password":"123456"} // 注册
+{"msgid":3,"name":"lisi","password":"123456"}
+{"msgid":4}  // 注册回应
+{"msgid":5,"id":1,"name":"zhangsan","to":2,"msg":"nihao"}  // 一对一聊天
+{"msgid":5,"id":2,"name":"lisi","to":1,"msg":"nihao,woshilis"}  // 一对一聊天
+
+{"msgid":6,"id":1,"friendid":2}
