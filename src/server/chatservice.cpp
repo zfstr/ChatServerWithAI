@@ -4,9 +4,23 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <chrono>
+#include <ctime>
 // 获取单例对象的接口函数
 using namespace muduo;
 using namespace std;
+
+string getCurrentTime()
+{
+    auto tt = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+    struct tm *ptm = localtime(&tt);
+    char date[60] = {0};
+    sprintf(date, "%d-%02d-%02d %02d:%02d:%02d",
+            (int)ptm->tm_year + 1900, (int)ptm->tm_mon + 1, (int)ptm->tm_mday,
+            (int)ptm->tm_hour, (int)ptm->tm_min, (int)ptm->tm_sec);
+    return std::string(date);
+}
+
 ChatService *ChatService::instance()
 {
     static ChatService service;
@@ -26,6 +40,7 @@ ChatService::ChatService()
     _msgHanderlerMap.insert({LOGINOUT_MSG, std::bind(&ChatService::loginout, this, _1, _2, _3)});
 
     _msgHanderlerMap.insert({CHAT_AI_MSG, std::bind(&ChatService::chatWithAI, this, _1, _2, _3)});
+    _msgHanderlerMap.insert({RESPONSE_WITH_AI_MSG, std::bind(&ChatService::responseWithAI, this, _1, _2, _3)});
      // 连接redis服务器
     if (_redis.connect())
     {
@@ -218,9 +233,29 @@ void ChatService::reg(const TcpConnectionPtr &conn, json &js, Timestamp time)
 void ChatService::oneChat(const TcpConnectionPtr &conn, json &js, Timestamp time)
 {
     int toid = js["toid"].get<int>();
+    int userid = js["id"].get<int>();
+    // 查询toid是否在线 
+    User user = _userModel.query(toid);
+    if (user.getResponse_with_ai() == 1)
+    {   
+        lock_guard<mutex> lock(_connMutex);
+        auto userit = _userConnMap.find(userid);
+        string str = js["msg"];
+        string responsewithai = ai.chat(str);
+        json ai_responsejs;
+        ai_responsejs["msgid"] = ONE_CHAT_MSG;
+        ai_responsejs["id"] = toid;
+        ai_responsejs["name"] = user.getName();
+        ai_responsejs["toid"] = userid;
+        ai_responsejs["msg"] = responsewithai;
+        ai_responsejs["time"] = getCurrentTime();
+        userit->second->send(ai_responsejs.dump());
+    }
+
     {
         lock_guard<mutex> lock(_connMutex);
         auto it = _userConnMap.find(toid);
+        
         if (it != _userConnMap.end())
         {
             // toid在线，转发消息  服务器主动推送消息给toid用户
@@ -228,15 +263,13 @@ void ChatService::oneChat(const TcpConnectionPtr &conn, json &js, Timestamp time
             return;
         }
     }
-
-    // 查询toid是否在线 
-    User user = _userModel.query(toid);
+    
     if (user.getState() == "online")
     {
         _redis.publish(toid, js.dump());
         return;
     }
-
+    
     // toid不在线，存储离线消息
     _offlineMsgModel.insert(toid, js.dump());
 }
@@ -301,6 +334,47 @@ void ChatService::groupChat(const TcpConnectionPtr &conn, json &js, Timestamp ti
     }
 }
 
+
+// 开启ai自动回复
+void ChatService::responseWithAI(const TcpConnectionPtr &conn, json &js, Timestamp time)
+{
+    int userid = js["id"].get<int>();
+    User user = _userModel.query(userid);
+    cout << userid << "状态" << user.getResponse_with_ai() << endl;
+    if(user.getResponse_with_ai() == 1 )
+    {
+        user.setResponse_with_ai(0);
+        if(_userModel.updateResponse_with_ai(user))
+        {
+            {
+                lock_guard<mutex> lock(_connMutex);
+                auto it = _userConnMap.find(userid);  
+                json AIjs;
+                AIjs["msgid"] = RESPONSE_WITH_AI_ACK_MSG;
+                AIjs["msg"] = "成功关闭ai自动回复功能";
+                it->second->send(AIjs.dump());
+            }
+        }
+    }
+    else
+    {
+        user.setResponse_with_ai(1);
+        if(_userModel.updateResponse_with_ai(user))
+        {
+            {
+                lock_guard<mutex> lock(_connMutex);
+                auto it = _userConnMap.find(userid);  
+                json AIjs;
+                AIjs["msgid"] = RESPONSE_WITH_AI_ACK_MSG;
+                AIjs["msg"] = "成功开启ai自动回复功能";
+                it->second->send(AIjs.dump());
+            }
+        }
+    }
+    
+}
+
+
 // 与AI聊天业务
 void ChatService::chatWithAI(const TcpConnectionPtr &conn, json &js, Timestamp time)
 {
@@ -316,7 +390,6 @@ void ChatService::chatWithAI(const TcpConnectionPtr &conn, json &js, Timestamp t
         it->second->send(AIjs.dump());
     }
 }
-
 
 void ChatService::loginout(const TcpConnectionPtr &conn, json &js, Timestamp time)
 {
@@ -339,6 +412,7 @@ void ChatService::loginout(const TcpConnectionPtr &conn, json &js, Timestamp tim
     _userModel.updateState(user);
     
 }
+
 void ChatService::clientCloseException(const TcpConnectionPtr &conn)
 {
     User user;

@@ -39,6 +39,9 @@ public:
     // 与AI聊天业务
     void chatWithAI(const TcpConnectionPtr &conn, json &js, Timestamp time);
 
+    // 开启ai自动回复
+    void responseWithAI(const TcpConnectionPtr &conn, json &js, Timestamp time);
+
     // 服务器异常，业务重置
     void reset();
     // 获取消息对应的处理器

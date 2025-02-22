@@ -50,7 +50,7 @@ User UserModel::query(int id)
                 user.setName(row[1]);
                 user.setPassword(row[2]);
                 user.setState(row[3]);
-
+                user.setResponse_with_ai(atoi(row[4]));
                 mysql_free_result(res);
                 return user;
             }
@@ -63,6 +63,25 @@ bool UserModel::updateState(User user)
     // 1、组装sql语句
     char sql[1024] = {0};
     sprintf(sql, "update User set state = '%s' where id = '%d'", user.getState().c_str(), user.getId());
+    MySQL mysql;
+    if (mysql.connect())
+    {
+        if (mysql.update(sql))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool UserModel::updateResponse_with_ai(User user)
+{
+    // 1、组装sql语句
+    char sql[1024] = {0};
+    // int response_with_ai = 0;
+    // if(user.getResponse_with_ai() == )
+    //     response_with_ai = 1;  
+    sprintf(sql, "update User set response_with_ai = '%d' where id = '%d'", user.getResponse_with_ai(), user.getId());
     MySQL mysql;
     if (mysql.connect())
     {

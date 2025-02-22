@@ -312,6 +312,11 @@ void readTaskHandler(int clientfd)
             cout << "AI said: " << js["msg"].get<string>() << endl;
             continue;
         }
+        if (RESPONSE_WITH_AI_ACK_MSG == msgtype)
+        {
+            cout << js["msg"].get<string>() << endl;
+            continue;
+        }
         if (COME_ONLINE_MSG == msgtype)
         {
             cout <<  js["id"] << " coming online" << endl;
@@ -392,6 +397,8 @@ void addgroup(int, string);
 void groupchat(int, string);
 // "aichat" command handler
 void aichat(int, string);
+// "responsewithAI" command handler
+void responsewithAI(int, string);
 // "loginout" command handler
 void loginout(int, string);
 
@@ -403,7 +410,8 @@ unordered_map<string, string> commandMap = {
     {"creategroup", "创建群组，格式creategroup:groupname:groupdesc"},
     {"addgroup", "加入群组，格式addgroup:groupid"},
     {"groupchat", "群聊，格式groupchat:groupid:message"},
-    {"aichat", "群聊，格式aichat:message"},
+    {"aichat", "AI问答，格式aichat:message"},
+    {"responsewithAI", "开启AI自动回复功能，格式responsewithAI"},
     {"loginout", "注销，格式loginout"}};
 
 // 注册系统支持的客户端命令处理
@@ -415,7 +423,10 @@ unordered_map<string, function<void(int, string)>> commandHandlerMap = {
     {"addgroup", addgroup},
     {"groupchat", groupchat},
     {"aichat", aichat},
-    {"loginout", loginout}};
+    {"loginout", loginout},
+    {"responsewithAI", responsewithAI}
+};
+
 
 // 主聊天页面程序
 void mainMenu(int clientfd)
@@ -557,7 +568,7 @@ void aichat(int clientfd, string str)
     int len = send(clientfd, buffer.c_str(), strlen(buffer.c_str()) + 1, 0);
     if (-1 == len)
     {
-        cerr << "send addgroup msg error -> " << buffer << endl;
+        cerr << "send aichat msg error -> " << buffer << endl;
     }
 }
 // "groupchat" command handler   groupid:message
@@ -587,6 +598,20 @@ void groupchat(int clientfd, string str)
     if (-1 == len)
     {
         cerr << "send groupchat msg error -> " << buffer << endl;
+    }
+}
+// "responsewithAI" command handler
+void responsewithAI(int clientfd, string str)
+{
+    json js;
+    js["msgid"] = RESPONSE_WITH_AI_MSG;
+    js["id"] = g_currentUser.getId();
+    string buffer = js.dump();
+
+    int len = send(clientfd, buffer.c_str(), strlen(buffer.c_str()) + 1, 0);
+    if (-1 == len)
+    {
+        cerr << "send responsewithAI msg error -> " << buffer << endl;
     }
 }
 // "loginout" command handler

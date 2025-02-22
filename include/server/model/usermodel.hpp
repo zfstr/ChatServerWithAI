@@ -9,6 +9,9 @@ public:
     // 根据用户号码查询用户信息
     User query(int id);
     bool updateState(User user);
+
+    bool updateResponse_with_ai(User user);
+
     void resetState();
 
 };

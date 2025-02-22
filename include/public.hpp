@@ -16,6 +16,8 @@ enum EnMsgType
     GROUP_CHAT_MSG, // 群聊天
     COME_ONLINE_MSG, //
     CHAT_AI_MSG, // AI聊天
+    RESPONSE_WITH_AI_MSG, // 用AI自动回复
+    RESPONSE_WITH_AI_ACK_MSG, // 用AI自动回复
    
 };
 
