@@ -307,7 +307,11 @@ void readTaskHandler(int clientfd)
                  << " said: " << js["msg"].get<string>() << endl;
             continue;
         }
-
+        if (CHAT_AI_MSG == msgtype)
+        {
+            cout << "AI said: " << js["msg"].get<string>() << endl;
+            continue;
+        }
         if (COME_ONLINE_MSG == msgtype)
         {
             cout <<  js["id"] << " coming online" << endl;
@@ -386,6 +390,8 @@ void creategroup(int, string);
 void addgroup(int, string);
 // "groupchat" command handler
 void groupchat(int, string);
+// "aichat" command handler
+void aichat(int, string);
 // "loginout" command handler
 void loginout(int, string);
 
@@ -397,6 +403,7 @@ unordered_map<string, string> commandMap = {
     {"creategroup", "创建群组，格式creategroup:groupname:groupdesc"},
     {"addgroup", "加入群组，格式addgroup:groupid"},
     {"groupchat", "群聊，格式groupchat:groupid:message"},
+    {"aichat", "群聊，格式aichat:message"},
     {"loginout", "注销，格式loginout"}};
 
 // 注册系统支持的客户端命令处理
@@ -407,6 +414,7 @@ unordered_map<string, function<void(int, string)>> commandHandlerMap = {
     {"creategroup", creategroup},
     {"addgroup", addgroup},
     {"groupchat", groupchat},
+    {"aichat", aichat},
     {"loginout", loginout}};
 
 // 主聊天页面程序
@@ -529,6 +537,21 @@ void addgroup(int clientfd, string str)
     js["msgid"] = ADD_GROUP_MSG;
     js["id"] = g_currentUser.getId();
     js["groupid"] = groupid;
+    string buffer = js.dump();
+
+    int len = send(clientfd, buffer.c_str(), strlen(buffer.c_str()) + 1, 0);
+    if (-1 == len)
+    {
+        cerr << "send addgroup msg error -> " << buffer << endl;
+    }
+}
+// "aichat" command handler
+void aichat(int clientfd, string str)
+{
+    json js;
+    js["msgid"] = CHAT_AI_MSG;
+    js["id"] = g_currentUser.getId();
+    js["msg"] = str;
     string buffer = js.dump();
 
     int len = send(clientfd, buffer.c_str(), strlen(buffer.c_str()) + 1, 0);

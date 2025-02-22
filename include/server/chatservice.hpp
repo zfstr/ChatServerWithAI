@@ -11,6 +11,7 @@
 #include "friendmodel.hpp"
 #include "groupmodel.hpp"
 #include "redis.hpp"
+#include "ai.hpp"
 using json = nlohmann::json;
 using namespace std;
 using namespace muduo;
@@ -19,7 +20,7 @@ using MsgHander = std::function<void(const TcpConnectionPtr &conn, json &js, Tim
 class ChatService
 {
 public:
-    // 获取单例对象的接口函数 
+    // 获取单例对象的接口函数
     static ChatService * instance();
     // 处理登录业务和注册业务
     void login(const TcpConnectionPtr &conn, json &js, Timestamp time);
@@ -34,6 +35,10 @@ public:
     void addGroup(const TcpConnectionPtr &conn, json &js, Timestamp time);
     // 群聊业务
     void groupChat(const TcpConnectionPtr &conn, json &js, Timestamp time);
+
+    // 与AI聊天业务
+    void chatWithAI(const TcpConnectionPtr &conn, json &js, Timestamp time);
+
     // 服务器异常，业务重置
     void reset();
     // 获取消息对应的处理器
@@ -61,6 +66,9 @@ private:
 
     // Redis 操作对象
     Redis _redis;
+
+    // AI 操作对象
+    AI ai;
 };
 
 

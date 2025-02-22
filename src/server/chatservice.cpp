@@ -25,6 +25,7 @@ ChatService::ChatService()
     _msgHanderlerMap.insert({GROUP_CHAT_MSG, std::bind(&ChatService::groupChat, this, _1, _2, _3)});
     _msgHanderlerMap.insert({LOGINOUT_MSG, std::bind(&ChatService::loginout, this, _1, _2, _3)});
 
+    _msgHanderlerMap.insert({CHAT_AI_MSG, std::bind(&ChatService::chatWithAI, this, _1, _2, _3)});
      // 连接redis服务器
     if (_redis.connect())
     {
@@ -299,6 +300,23 @@ void ChatService::groupChat(const TcpConnectionPtr &conn, json &js, Timestamp ti
         }
     }
 }
+
+// 与AI聊天业务
+void ChatService::chatWithAI(const TcpConnectionPtr &conn, json &js, Timestamp time)
+{
+    int id = js["id"].get<int>();
+    {
+        lock_guard<mutex> lock(_connMutex);
+        auto it = _userConnMap.find(id);   
+        string msg = js["msg"].get<string>();
+        string sendmsg = ai.chat(msg);
+        json AIjs;
+        AIjs["msgid"] = CHAT_AI_MSG;
+        AIjs["msg"] = sendmsg;
+        it->second->send(AIjs.dump());
+    }
+}
+
 
 void ChatService::loginout(const TcpConnectionPtr &conn, json &js, Timestamp time)
 {
